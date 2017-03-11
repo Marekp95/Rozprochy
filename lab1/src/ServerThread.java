@@ -21,16 +21,9 @@ public class ServerThread extends Thread {
     public void run() {
         String name = scanner.nextLine();
         server.register(name, this);
-        while(true) {
-            while (scanner.hasNextLine()) {
-                String message = scanner.nextLine();
-                server.sendAll(name, message);
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        while (scanner.hasNextLine()) {
+            String message = scanner.nextLine();
+            server.sendAll(name, message);
         }
     }
 

@@ -25,15 +25,8 @@ public class Client {
 
         Scanner finalScanner = new Scanner(socket.getInputStream());
         new Thread(() -> {
-            while(true) {
-                while (finalScanner.hasNextLine()) {
-                    System.out.println("TCP " + finalScanner.nextLine());
-                }
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            while (finalScanner.hasNextLine()) {
+                System.out.println("TCP " + finalScanner.nextLine());
             }
 
         }).start();
