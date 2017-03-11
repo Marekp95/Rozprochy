@@ -3,7 +3,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class ServerThread extends Thread {
+public class ServerThread implements Runnable {
     private Socket socket;
     private Scanner scanner;
     private PrintWriter printWriter;

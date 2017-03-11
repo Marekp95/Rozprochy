@@ -5,6 +5,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     public static final int PORT = 12311;
@@ -17,11 +19,13 @@ public class Server {
 
     private void start() {
         new Thread(() -> {
+            ExecutorService executorService = Executors.newFixedThreadPool(5);
+
             ServerSocket serverSocket = null;
             try {
                 serverSocket = new ServerSocket(Server.PORT);
                 while (true) {
-                    new ServerThread(this, serverSocket.accept()).start();
+                    executorService.execute(new ServerThread(this, serverSocket.accept()));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
