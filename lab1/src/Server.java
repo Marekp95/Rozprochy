@@ -10,8 +10,6 @@ import java.util.concurrent.Executors;
 
 public class Server {
     public static final int PORT = 12311;
-    public static final int PORT_M = 33011;
-    public static final String IP_M = "224.3.5.7";
     public static final int MSG_SIZE = 4096;
 
 
@@ -51,43 +49,27 @@ public class Server {
                     datagramSocket.receive(datagramPacket);
                     String message = new String(bytes);
 
-                    String[] split = message.split(";", 3);
+                    String[] split = message.split(": ", 2);
 
-                    if (split.length < 3) {
+                    if (split.length < 2) {
                         continue;
                     }
 
                     String name = split[0];
-                    String messageType = split[1];
-                    message = split[2];
+                    message = split[1];
 
-                    if (messageType.equals("M") || messageType.equals("N")) {
-                        for (String userName: users.keySet()) {
-                            if(!userName.equals(name)){
-                                try {
-                                    int port;
-                                    String IP;
-                                    switch (messageType) {
-                                        case "M":
-                                            IP = "localhost";
-                                            port = users.get(userName).getSocket().getPort();
-                                            break;
-                                        case "N":
-                                            IP = IP_M;
-                                            port = PORT_M;
-                                            break;
-                                        default:
-                                            continue;
-                                    }
-                                    InetAddress IPAddress = InetAddress.getByName(IP);
-                                    byte[] newBytes = (name + ":" + message).getBytes();
-                                    datagramSocket.send(new DatagramPacket(newBytes, newBytes.length, IPAddress, port));
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
+                    for (String userName : users.keySet()) {
+                        if (!userName.equals(name)) {
+                            try {
+                                InetAddress IPAddress = InetAddress.getByName("localhost");
+                                byte[] newBytes = (name + ":" + message).getBytes();
+                                datagramSocket.send(new DatagramPacket(newBytes, newBytes.length, IPAddress, users.get(userName).getSocket().getPort()));
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
                         }
                     }
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -110,7 +92,7 @@ public class Server {
     }
 
     public static void main(String[] args) {
-        Server server= new Server();
+        Server server = new Server();
         server.startUDP();
         server.start();
     }

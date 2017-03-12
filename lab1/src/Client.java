@@ -4,6 +4,8 @@ import java.net.*;
 import java.util.Scanner;
 
 public class Client {
+    private String multicastIP = "224.3.5.7";
+    private int multicastPort = 33011;
 
     private void start() throws IOException {
         Socket socket = new Socket();
@@ -42,8 +44,8 @@ public class Client {
         //multicast communication
         new Thread(() -> {
             try {
-                MulticastSocket multicastSocket = new MulticastSocket(Server.PORT_M);
-                multicastSocket.joinGroup(InetAddress.getByName(Server.IP_M));
+                MulticastSocket multicastSocket = new MulticastSocket(multicastPort);
+                multicastSocket.joinGroup(InetAddress.getByName(multicastIP));
                 while (true) {
                     byte[] buff = new byte[Server.MSG_SIZE];
                     DatagramPacket datagramPacket = new DatagramPacket(buff, buff.length);
@@ -64,9 +66,11 @@ public class Client {
         while (scanner.hasNextLine()) {
             String message = scanner.nextLine();
             if (message.equals("M") || message.equals("N")) {
-                InetAddress IPAddress = InetAddress.getByName("localhost");
 
-                byte[] bytes = (name + ";" + message + ";" + "\n" +
+                InetAddress IPAddress = InetAddress.getByName(message.equals("M") ? ("localhost") : (multicastIP));
+                int port = message.equals("M") ? Server.PORT : multicastPort;
+
+                byte[] bytes = (name + ": " + "\n" +
                         "              .@.                                    .\n" +
                         "              @m@,.                                 .@\n" +
                         "             .@m%nm@,.                            .@m@\n" +
@@ -97,7 +101,7 @@ public class Client {
                         "              @m@'                 `;%;             `@\n" +
                         "              `@'                   ;%;.             '\n" +
                         "               `                    `;%;             \n").getBytes();
-                datagramSocket.send(new DatagramPacket(bytes, bytes.length, IPAddress, Server.PORT));
+                datagramSocket.send(new DatagramPacket(bytes, bytes.length, IPAddress, port));
             } else {
                 printWriter.write(message + '\n');
                 printWriter.flush();
