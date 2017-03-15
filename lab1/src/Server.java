@@ -11,19 +11,19 @@ import java.util.concurrent.Executors;
 public class Server {
     public static final int PORT = 12311;
     public static final int MSG_SIZE = 4096;
+    public static final String msgSeparator = ": ";
 
 
     private Map<String, ServerThread> users = new HashMap<>();
 
     private void start() {
         new Thread(() -> {
-            ExecutorService executorService = Executors.newFixedThreadPool(5);
 
             ServerSocket serverSocket = null;
             try {
                 serverSocket = new ServerSocket(Server.PORT);
-                while (true) {
-                    executorService.execute(new ServerThread(this, serverSocket.accept()));
+                while (!serverSocket.isClosed()) {
+                    new Thread(new ServerThread(this, serverSocket.accept())).start();
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -49,7 +49,7 @@ public class Server {
                     datagramSocket.receive(datagramPacket);
                     String message = new String(bytes);
 
-                    String[] split = message.split(": ", 2);
+                    String[] split = message.split(msgSeparator, 2);
 
                     if (split.length < 2) {
                         continue;

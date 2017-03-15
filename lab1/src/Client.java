@@ -29,7 +29,7 @@ public class Client {
         //UDP communication
         new Thread(() -> {
             try {
-                while (true) {
+                while (!datagramSocket.isClosed()) {
                     byte[] buff = new byte[Server.MSG_SIZE];
                     DatagramPacket datagramPacket = new DatagramPacket(buff, buff.length);
                     datagramSocket.receive(datagramPacket);
@@ -46,12 +46,14 @@ public class Client {
             try {
                 MulticastSocket multicastSocket = new MulticastSocket(multicastPort);
                 multicastSocket.joinGroup(InetAddress.getByName(multicastIP));
-                while (true) {
+                while (!multicastSocket.isClosed()) {
                     byte[] buff = new byte[Server.MSG_SIZE];
                     DatagramPacket datagramPacket = new DatagramPacket(buff, buff.length);
                     multicastSocket.receive(datagramPacket);
                     String message = new String(buff);
-                    System.out.println("Multicast message: " + message);
+                    if (!message.startsWith(name)) {
+                        System.out.println("Multicast message: " + message);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -70,7 +72,7 @@ public class Client {
                 InetAddress IPAddress = InetAddress.getByName(message.equals("M") ? ("localhost") : (multicastIP));
                 int port = message.equals("M") ? Server.PORT : multicastPort;
 
-                byte[] bytes = (name + ": " + "\n" +
+                byte[] bytes = (name + Server.msgSeparator + "\n" +
                         "              .@.                                    .\n" +
                         "              @m@,.                                 .@\n" +
                         "             .@m%nm@,.                            .@m@\n" +
