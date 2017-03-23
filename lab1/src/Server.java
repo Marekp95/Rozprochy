@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class Server {
     public static final int PORT = 12311;
@@ -18,12 +19,12 @@ public class Server {
 
     private void start() {
         new Thread(() -> {
-
+            ExecutorService executor = Executors.newFixedThreadPool(10);
             ServerSocket serverSocket = null;
             try {
                 serverSocket = new ServerSocket(Server.PORT);
                 while (!serverSocket.isClosed()) {
-                    new Thread(new ServerThread(this, serverSocket.accept())).start();
+                    executor.execute(new ServerThread(this, serverSocket.accept()));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -83,7 +84,7 @@ public class Server {
         users.put(name, serverThread);
     }
 
-    public void sendAll(String name, String message) {
+    synchronized public void sendAll(String name, String message) {
         for (String userName : users.keySet()) {
             if (!userName.equals(name)) {
                 users.get(userName).send(name + ": " + message + "\n");
