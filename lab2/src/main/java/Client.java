@@ -1,4 +1,6 @@
+import com.google.protobuf.*;
 import org.jgroups.*;
+import org.jgroups.Message;
 import org.jgroups.protocols.*;
 import org.jgroups.protocols.pbcast.*;
 import org.jgroups.stack.ProtocolStack;
@@ -14,6 +16,7 @@ public class Client extends ReceiverAdapter {
     private Map<String, JChannel> channelMap = new HashMap<String, JChannel>();
     private Map<String, List<Address>> addressMap = new HashMap<String, List<Address>>();
     private String channelName = "";
+    private Map<String, Set<String>> state = new HashMap<String, Set<String>>();
 
     public Client(String name) {
         this.name = name;
@@ -22,7 +25,7 @@ public class Client extends ReceiverAdapter {
     private void start() throws Exception {
         channelState = new JChannel(false);
 
-        ProtocolStack stack = new ProtocolStack();
+        final ProtocolStack stack = new ProtocolStack();
         stack.addProtocol(new UDP().setValue("mcast_group_addr", InetAddress.getByName("230.0.0.36")))
                 .addProtocol(new PING())
                 .addProtocol(new MERGE3())
@@ -49,6 +52,20 @@ public class Client extends ReceiverAdapter {
                 for (Address a : new_view.getMembers()) {
                     System.out.println(a);
                 }
+                ChatOperationProtos.ChatState.Builder chatStateBuilder = ChatOperationProtos.ChatState.newBuilder();
+
+                for(String channel: state.keySet()){
+                    for(String name: state.get(channel)){
+                        ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setAction(ChatOperationProtos.ChatAction.ActionType.JOIN).setNickname(name).setChannel(channel).build();
+                        chatStateBuilder.addState(chatAction);
+                    }
+                }
+                Message message = new Message(null, null, chatStateBuilder.build().toByteArray());
+                try {
+                    channelState.send(message);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 addressList = new_view.getMembers();
                 System.out.println("** view: " + new_view);
             }
@@ -56,37 +73,44 @@ public class Client extends ReceiverAdapter {
             @Override
             public void receive(Message msg) {
                 try {
-                    //ChatOperationProtos.ChatMessage chatMessage = ChatOperationProtos.ChatMessage.parseFrom(msg.getRawBuffer());
-                    // System.out.println(msg.getSrc() + " " + new String(msg.getRawBuffer()));
+                    ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.parseFrom(msg.getRawBuffer());
+                    refreshState(chatAction);
 
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (InvalidProtocolBufferException e) {
+                    try {
+                        ChatOperationProtos.ChatState chatState = ChatOperationProtos.ChatState.parseFrom(msg.getRawBuffer());
+                        for(ChatOperationProtos.ChatAction chatAction: chatState.getStateList()){
+                            refreshState(chatAction);
+                        }
+                    } catch (InvalidProtocolBufferException e1) {
+                        e1.printStackTrace();
+                    }
                 }
             }
         });
 
         channelState.connect("ChatManagement321123");
 
-        // ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setChannel("ChatManagement321123").setNickname(name).setAction(ChatOperationProtos.ChatAction.ActionType.JOIN).build();
-
-        //channelState.send(new Message(null, null, chatAction.toByteArray()));
     }
 
-    /*@Override
-    public void viewAccepted(View new_view) {
-        System.out.println("** view: " + new_view);
-    }
+    private void refreshState(ChatOperationProtos.ChatAction chatAction) {
+        switch (chatAction.getAction()) {
+            case JOIN:
+                if (!state.containsKey(chatAction.getChannel())) {
+                    state.put(chatAction.getChannel(), new HashSet<String>());
+                }
+                state.get(chatAction.getChannel()).add(chatAction.getNickname());
 
-    @Override
-    public void receive(Message msg) {
-        try {
-            //ChatOperationProtos.ChatMessage chatMessage = ChatOperationProtos.ChatMessage.parseFrom(msg.getRawBuffer());
-            System.out.println(msg.getSrc() + " " + new String(msg.getRawBuffer()));
-
-        } catch (Exception e) {
-            e.printStackTrace();
+                break;
+            case LEAVE:
+                if (state.containsKey(chatAction.getChannel())) {
+                    state.get(chatAction.getChannel()).remove(chatAction.getNickname());
+                }
+                break;
+            default:
+                break;
         }
-    }*/
+    }
 
     private void send(String msg) throws Exception {
         ChatOperationProtos.ChatMessage chatMessage = ChatOperationProtos.ChatMessage.newBuilder().setMessage(msg).build();
@@ -102,7 +126,7 @@ public class Client extends ReceiverAdapter {
             return;
         }
 
-        if(channelMap.containsKey(name)){
+        if (channelMap.containsKey(name)) {
             changeChannelName(name);
             return;
         }
@@ -152,6 +176,9 @@ public class Client extends ReceiverAdapter {
         channel.connect(name);
         channelName = name;
         channelMap.put(name, channel);
+        ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setAction(ChatOperationProtos.ChatAction.ActionType.JOIN).setNickname(this.name).setChannel(channelName).build();
+        Message message = new Message(null, null, chatAction.toByteArray());
+        channelState.send(message);
     }
 
     private void changeChannelName(String name) {
@@ -165,13 +192,19 @@ public class Client extends ReceiverAdapter {
     }
 
     private void showMembers() {
-        for (Address a : addressList) {
+        /*for (Address a : addressList) {
             System.out.println(a);
         }
         for (String addresses : addressMap.keySet()) {
             System.out.println(addresses);
             for (Address address : addressMap.get(addresses)) {
                 System.out.println("\t" + address);
+            }
+        }*/
+        for (String channel : state.keySet()) {
+            System.out.println(channel);
+            for (String name : state.get(channel)) {
+                System.out.println("\t" + name);
             }
         }
     }
