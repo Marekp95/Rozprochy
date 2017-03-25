@@ -12,9 +12,7 @@ import java.util.*;
 public class Client extends ReceiverAdapter {
     private final String name;
     private JChannel channelState;
-    private List<Address> addressList = Collections.emptyList();
     private Map<String, JChannel> channelMap = new HashMap<String, JChannel>();
-    private Map<String, List<Address>> addressMap = new HashMap<String, List<Address>>();
     private String channelName = "";
     private Map<String, Set<String>> state = new HashMap<String, Set<String>>();
 
@@ -54,8 +52,8 @@ public class Client extends ReceiverAdapter {
                 }
                 ChatOperationProtos.ChatState.Builder chatStateBuilder = ChatOperationProtos.ChatState.newBuilder();
 
-                for(String channel: state.keySet()){
-                    for(String name: state.get(channel)){
+                for (String channel : state.keySet()) {
+                    for (String name : state.get(channel)) {
                         ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setAction(ChatOperationProtos.ChatAction.ActionType.JOIN).setNickname(name).setChannel(channel).build();
                         chatStateBuilder.addState(chatAction);
                     }
@@ -66,7 +64,6 @@ public class Client extends ReceiverAdapter {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                addressList = new_view.getMembers();
                 System.out.println("** view: " + new_view);
             }
 
@@ -79,7 +76,7 @@ public class Client extends ReceiverAdapter {
                 } catch (InvalidProtocolBufferException e) {
                     try {
                         ChatOperationProtos.ChatState chatState = ChatOperationProtos.ChatState.parseFrom(msg.getRawBuffer());
-                        for(ChatOperationProtos.ChatAction chatAction: chatState.getStateList()){
+                        for (ChatOperationProtos.ChatAction chatAction : chatState.getStateList()) {
                             refreshState(chatAction);
                         }
                     } catch (InvalidProtocolBufferException e1) {
@@ -122,7 +119,7 @@ public class Client extends ReceiverAdapter {
 
     private void createChannel(final String name) throws Exception {
         if (!name.matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")) {
-            System.out.println(name);
+            System.out.println("Wrong channel name: " + name);
             return;
         }
 
@@ -157,15 +154,14 @@ public class Client extends ReceiverAdapter {
         channel.setReceiver(new ReceiverAdapter() {
             @Override
             public void viewAccepted(View new_view) {
-
-                addressMap.put(name, new_view.getMembers());
                 System.out.println(name + " ** view: " + new_view);
             }
 
             @Override
             public void receive(Message msg) {
                 try {
-                    System.out.println(name + " " + msg.getSrc() + " " + new String(msg.getRawBuffer()));
+                    ChatOperationProtos.ChatMessage chatMessage = ChatOperationProtos.ChatMessage.parseFrom(msg.getRawBuffer());
+                    System.out.println(name + ">> " + msg.getSrc() + ": " + chatMessage.getMessage());
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -188,19 +184,29 @@ public class Client extends ReceiverAdapter {
     }
 
     private void disconnectChannel(String name) {
-        //todo
+        if (channelMap.containsKey(name)) {
+            if (name.equals(channelName)) {
+                channelName = "";
+            }
+
+            JChannel jChannel = channelMap.get(name);
+            if (!jChannel.isClosed()) {
+                jChannel.close();
+            }
+
+            channelMap.remove(name);
+
+            ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setAction(ChatOperationProtos.ChatAction.ActionType.LEAVE).setNickname(this.name).setChannel(name).build();
+            Message message = new Message(null, null, chatAction.toByteArray());
+            try {
+                channelState.send(message);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void showMembers() {
-        /*for (Address a : addressList) {
-            System.out.println(a);
-        }
-        for (String addresses : addressMap.keySet()) {
-            System.out.println(addresses);
-            for (Address address : addressMap.get(addresses)) {
-                System.out.println("\t" + address);
-            }
-        }*/
         for (String channel : state.keySet()) {
             System.out.println(channel);
             for (String name : state.get(channel)) {
@@ -221,23 +227,49 @@ public class Client extends ReceiverAdapter {
             e.printStackTrace();
         }
         while (true) {
+            System.out.print(client.channelName + ">> ");
             String msg = scanner.nextLine();
-            if (msg.equals("show")) {
+            if (msg.equals("/h")) {
+                System.out.println("Commands: \n" +
+                        "/h - help\n" +
+                        "/s - show users\n" +
+                        "/o IP - open channel\n" +
+                        "/c IP - close channel\n" +
+                        "/exit");
+            } else if (msg.equals("/s")) {
                 client.showMembers();
-            } else if (msg.startsWith("create ")) {
-                // todo
+            } else if (msg.startsWith("/c ")) {
+                String[] strings = msg.split(" ", 2);
+                if (strings.length > 1) {
+                    client.disconnectChannel(strings[1]);
+                }
+            } else if (msg.equals("/exit")) {
+                break;
+            } else if (msg.startsWith("/o ")) {
                 try {
-                    client.createChannel(msg.split(" ", 2)[1]);
+                    String[] strings = msg.split(" ", 2);
+                    if (strings.length > 1) {
+                        client.createChannel(strings[1]);
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-            } else {
+            } else if (msg.length() > 0) {
                 try {
                     client.send(msg);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
+        }
+
+        for (JChannel jChannel : client.channelMap.values()) {
+            if (!jChannel.isClosed()) {
+                jChannel.close();
+            }
+        }
+        if (!client.channelState.isClosed()) {
+            client.channelState.close();
         }
     }
 }
