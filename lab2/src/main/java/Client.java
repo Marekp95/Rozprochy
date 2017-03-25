@@ -216,7 +216,7 @@ public class Client extends ReceiverAdapter {
         }
     }
 
-    private void printHelp(){
+    private void printHelp() {
         System.out.println("Commands: \n" +
                 "/h - help\n" +
                 "/s - show users\n" +
