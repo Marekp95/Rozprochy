@@ -151,6 +151,7 @@ public class Client extends ReceiverAdapter {
         channel.setProtocolStack(stack);
         stack.init();
 
+        channel.setName(this.name);
         channel.setReceiver(new ReceiverAdapter() {
             @Override
             public void viewAccepted(View new_view) {
@@ -215,8 +216,19 @@ public class Client extends ReceiverAdapter {
         }
     }
 
+    private void printHelp(){
+        System.out.println("Commands: \n" +
+                "/h - help\n" +
+                "/s - show users\n" +
+                "/o IP - open channel\n" +
+                "/c IP - close channel\n" +
+                "/exit");
+    }
+
     public static void main(String[] args) {
         System.setProperty("java.net.preferIPv4Stack", "true");
+
+        System.out.println("Enter your name:");
         Scanner scanner = new Scanner(System.in);
         String name = scanner.nextLine();
 
@@ -226,16 +238,13 @@ public class Client extends ReceiverAdapter {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        client.printHelp();
         while (true) {
             System.out.print(client.channelName + ">> ");
             String msg = scanner.nextLine();
             if (msg.equals("/h")) {
-                System.out.println("Commands: \n" +
-                        "/h - help\n" +
-                        "/s - show users\n" +
-                        "/o IP - open channel\n" +
-                        "/c IP - close channel\n" +
-                        "/exit");
+                client.printHelp();
             } else if (msg.equals("/s")) {
                 client.showMembers();
             } else if (msg.startsWith("/c ")) {
