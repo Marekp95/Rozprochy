@@ -1,4 +1,3 @@
-import com.google.protobuf.*;
 import org.jgroups.*;
 import org.jgroups.Message;
 import org.jgroups.protocols.*;
@@ -14,17 +13,23 @@ public class Client extends ReceiverAdapter {
     private JChannel channelState;
     private Map<String, JChannel> channelMap = new HashMap<String, JChannel>();
     private String channelName = "";
+    static final String channelManagementName = "ChatManagement321321";
     private Map<String, Set<String>> state = new HashMap<String, Set<String>>();
+
 
     public Client(String name) {
         this.name = name;
+    }
+
+    public Map<String, Set<String>> getState() {
+        return state;
     }
 
     private void start() throws Exception {
         channelState = new JChannel(false);
 
         final ProtocolStack stack = new ProtocolStack();
-        stack.addProtocol(new UDP().setValue("mcast_group_addr", InetAddress.getByName("230.0.0.36")))
+        stack.addProtocol(new UDP()/*.setValue("bind_addr", InetAddress.getByName("192.168.193.2"))*/)
                 .addProtocol(new PING())
                 .addProtocol(new MERGE3())
                 .addProtocol(new FD_SOCK())
@@ -44,53 +49,25 @@ public class Client extends ReceiverAdapter {
         channelState.setProtocolStack(stack);
         stack.init();
 
-        channelState.setReceiver(new ReceiverAdapter() {
-            @Override
-            public void viewAccepted(View new_view) {
-                for (Address a : new_view.getMembers()) {
-                    System.out.println(a);
-                }
-                ChatOperationProtos.ChatState.Builder chatStateBuilder = ChatOperationProtos.ChatState.newBuilder();
+        state.put(channelManagementName, new HashSet<String>());
+        state.get(channelManagementName).add(this.name);
 
-                for (String channel : state.keySet()) {
-                    for (String name : state.get(channel)) {
-                        ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.newBuilder().setAction(ChatOperationProtos.ChatAction.ActionType.JOIN).setNickname(name).setChannel(channel).build();
-                        chatStateBuilder.addState(chatAction);
-                    }
-                }
-                Message message = new Message(null, null, chatStateBuilder.build().toByteArray());
-                try {
-                    channelState.send(message);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                System.out.println("** view: " + new_view);
-            }
+        channelState.setReceiver(new ManagementReceiver(this));
 
-            @Override
-            public void receive(Message msg) {
-                try {
-                    ChatOperationProtos.ChatAction chatAction = ChatOperationProtos.ChatAction.parseFrom(msg.getRawBuffer());
-                    refreshState(chatAction);
-
-                } catch (InvalidProtocolBufferException e) {
-                    try {
-                        ChatOperationProtos.ChatState chatState = ChatOperationProtos.ChatState.parseFrom(msg.getRawBuffer());
-                        for (ChatOperationProtos.ChatAction chatAction : chatState.getStateList()) {
-                            refreshState(chatAction);
-                        }
-                    } catch (InvalidProtocolBufferException e1) {
-                        e1.printStackTrace();
-                    }
-                }
-            }
-        });
-
-        channelState.connect("ChatManagement321123");
+        channelState.setName(this.name);
+        channelState.connect(channelManagementName);
+        channelState.getState(null, 0);
 
     }
 
-    private void refreshState(ChatOperationProtos.ChatAction chatAction) {
+    synchronized void clearState(String name) {
+        if (state.containsKey(name)) {
+            state.get(name).clear();
+        }
+    }
+
+
+    synchronized void refreshState(ChatOperationProtos.ChatAction chatAction) {
         switch (chatAction.getAction()) {
             case JOIN:
                 if (!state.containsKey(chatAction.getChannel())) {
@@ -128,10 +105,11 @@ public class Client extends ReceiverAdapter {
             return;
         }
 
-        JChannel channel = new JChannel(false);
+        final JChannel channel = new JChannel(false);
+        channel.setName(this.name);
 
         ProtocolStack stack = new ProtocolStack();
-        stack.addProtocol(new UDP().setValue("mcast_group_addr", InetAddress.getByName(name)))
+        stack.addProtocol(new UDP()/*.setValue("bind_addr", InetAddress.getByName("192.168.193.2"))*/.setValue("mcast_group_addr", InetAddress.getByName(name)))
                 .addProtocol(new PING())
                 .addProtocol(new MERGE3())
                 .addProtocol(new FD_SOCK())
@@ -152,23 +130,7 @@ public class Client extends ReceiverAdapter {
         stack.init();
 
         channel.setName(this.name);
-        channel.setReceiver(new ReceiverAdapter() {
-            @Override
-            public void viewAccepted(View new_view) {
-                System.out.println(name + " ** view: " + new_view);
-            }
-
-            @Override
-            public void receive(Message msg) {
-                try {
-                    ChatOperationProtos.ChatMessage chatMessage = ChatOperationProtos.ChatMessage.parseFrom(msg.getRawBuffer());
-                    System.out.println(name + ">> " + msg.getSrc() + ": " + chatMessage.getMessage());
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        channel.setReceiver(new Receiver(name, this));
 
         channel.connect(name);
         channelName = name;
