@@ -13,6 +13,7 @@ public class Doctor {
 
         // info
         System.out.println("Doctor");
+        System.out.println("Enter id:");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String id = br.readLine();
         QUEUE_NAME += id;

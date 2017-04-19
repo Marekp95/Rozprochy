@@ -9,6 +9,7 @@ public class Technician {
     public static void main(String[] argv) throws Exception {
         // info
         System.out.println("Technician");
+        System.out.println("Enter specializations");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         String[] specializations = br.readLine().split(" ");
 
