@@ -10,16 +10,14 @@ import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-public class Worker extends AbstractActor {
+public class DbWorker extends AbstractActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
     private final String fileName;
-    // private final File file;
 
-    public Worker(String fileName) {
+    public DbWorker(String fileName) {
         this.fileName = fileName;
-        //this.file = new File(fileName);
     }
 
     @Override

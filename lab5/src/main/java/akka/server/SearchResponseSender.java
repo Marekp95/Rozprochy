@@ -5,7 +5,7 @@ import akka.actor.ActorRef;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
-public class ResponseSender extends AbstractActor {
+public class SearchResponseSender extends AbstractActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
@@ -13,7 +13,7 @@ public class ResponseSender extends AbstractActor {
     private boolean send = false;
     private int counter = 0;
 
-    public ResponseSender(ActorRef receiver) {
+    public SearchResponseSender(ActorRef receiver) {
         this.receiver = receiver;
     }
 
