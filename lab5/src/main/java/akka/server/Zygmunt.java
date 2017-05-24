@@ -21,7 +21,6 @@ public class Zygmunt extends AbstractActor {
                 })
                 .match(SuicideRequest.class, r -> {
                     getSender().tell(PoisonPill.getInstance(), getSelf());
-                    System.out.println("aaaaaaaaaaaasssssssssssssssssss");
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
