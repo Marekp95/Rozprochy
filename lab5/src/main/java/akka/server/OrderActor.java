@@ -3,7 +3,6 @@ package akka.server;
 import akka.ResponseMessage;
 import akka.actor.AbstractActor;
 import akka.actor.OneForOneStrategy;
-import akka.actor.Props;
 import akka.actor.SupervisorStrategy;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
@@ -31,7 +30,7 @@ public class OrderActor extends AbstractActor {
                     System.out.println("order: " + s);
                     synchronized (ServerApp.class) {
                         PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true), true);
-                        printWriter.println(s.replace("order ", ""));
+                        printWriter.println(s.replaceFirst("order ", ""));
                         printWriter.close();
                     }
 
@@ -39,11 +38,6 @@ public class OrderActor extends AbstractActor {
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
-    }
-
-    @Override
-    public void preStart() throws Exception {
-
     }
 
     @Override

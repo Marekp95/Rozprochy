@@ -15,6 +15,8 @@ public class NoahWyle extends AbstractActor {
                 .match(String.class, s -> {
                     if (s.startsWith("order ")){
                         getContext().actorSelection("orderReceiver").tell(s, getSender());
+                    } else if (s.startsWith("read ")){
+                        getContext().actorSelection("reader").tell(s, getSender());
                     }
                 })
                 .matchAny(o -> log.info("received unknown message"))
@@ -24,5 +26,6 @@ public class NoahWyle extends AbstractActor {
     @Override
     public void preStart() throws Exception {
         context().actorOf(Props.create(OrderActor.class), "orderReceiver");
+        context().actorOf(Props.create(TomaszKnapik.class), "reader");
     }
 }
