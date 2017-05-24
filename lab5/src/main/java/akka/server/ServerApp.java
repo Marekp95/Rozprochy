@@ -1,6 +1,5 @@
 package akka.server;
 
-import akka.Z2_RemoteActor;
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
 import akka.actor.Props;

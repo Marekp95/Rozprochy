@@ -19,7 +19,6 @@ public class ActorLocal extends AbstractActor {
                     System.out.println(r.getMessage());
                 })
                 .match(Integer.class, i -> {
-                    System.out.println(getSender());
                     if (i >= 0) {
                         System.out.println("Price: " + i);
                     } else {

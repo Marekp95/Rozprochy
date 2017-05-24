@@ -1,6 +1,8 @@
 package akka.server;
 
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
+import akka.actor.PoisonPill;
 import akka.actor.Props;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
@@ -13,8 +15,13 @@ public class Zygmunt extends AbstractActor {
     public AbstractActor.Receive createReceive() {
         return receiveBuilder()
                 .match(String.class, s -> {
-                    context().child("worker1").get().tell(s, getSender());
-                    context().child("worker2").get().tell(s, getSender());
+                    ActorRef actor = context().actorOf(Props.create(ResponseSender.class, getSender()));
+                    context().child("worker1").get().tell(s, actor);
+                    context().child("worker2").get().tell(s, actor);
+                })
+                .match(SuicideRequest.class, r -> {
+                    getSender().tell(PoisonPill.getInstance(), getSelf());
+                    System.out.println("aaaaaaaaaaaasssssssssssssssssss");
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
