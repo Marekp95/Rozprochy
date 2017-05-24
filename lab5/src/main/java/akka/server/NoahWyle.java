@@ -7,25 +7,28 @@ import akka.event.LoggingAdapter;
 
 public class NoahWyle extends AbstractActor {
 
-    private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
+private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
-    @Override
-    public AbstractActor.Receive createReceive() {
+@Override
+public AbstractActor.Receive createReceive() {
         return receiveBuilder()
-                .match(String.class, s -> {
-                    if (s.startsWith("order ")){
-                        getContext().actorSelection("orderReceiver").tell(s, getSender());
-                    } else if (s.startsWith("read ")){
-                        getContext().actorSelection("reader").tell(s, getSender());
-                    }
-                })
-                .matchAny(o -> log.info("received unknown message"))
-                .build();
-    }
+        .match(String.class, s -> {
+        if (s.startsWith("order ")){
+        getContext().actorSelection("orderReceiver").tell(s, getSender());
+        } else if (s.startsWith("read ")){
+        getContext().actorSelection("reader").tell(s, getSender());
+        } else if (s.startsWith("find ")){
+        getContext().actorSelection("dbManager").tell(s, getSender());
+        }
+        })
+        .matchAny(o -> log.info("received unknown message"))
+        .build();
+        }
 
-    @Override
-    public void preStart() throws Exception {
+@Override
+public void preStart() throws Exception {
         context().actorOf(Props.create(OrderActor.class), "orderReceiver");
         context().actorOf(Props.create(TomaszKnapik.class), "reader");
-    }
-}
+        context().actorOf(Props.create(Zygmunt.class), "dbManager");
+        }
+        }

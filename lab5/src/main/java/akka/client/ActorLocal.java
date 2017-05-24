@@ -12,12 +12,19 @@ public class ActorLocal extends AbstractActor {
     @Override
     public AbstractActor.Receive createReceive() {
         return receiveBuilder()
-                // TODO
                 .match(String.class, s -> {
                     getContext().actorSelection("akka.tcp://library@127.0.0.1:3552/user/librarian").tell(s, getSelf());
                 })
                 .match(ResponseMessage.class, r -> {
                     System.out.println(r.getMessage());
+                })
+                .match(Integer.class, i -> {
+                    System.out.println(getSender());
+                    if (i >= 0) {
+                        System.out.println("Price: " + i);
+                    } else {
+                        System.out.println("404 - Book not found");
+                    }
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
