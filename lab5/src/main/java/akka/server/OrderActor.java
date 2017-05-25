@@ -2,12 +2,8 @@ package akka.server;
 
 import akka.ResponseMessage;
 import akka.actor.AbstractActor;
-import akka.actor.OneForOneStrategy;
-import akka.actor.SupervisorStrategy;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import akka.japi.pf.DeciderBuilder;
-import scala.concurrent.duration.Duration;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,11 +24,9 @@ public class OrderActor extends AbstractActor {
         return receiveBuilder()
                 .match(String.class, s -> {
                     System.out.println("order: " + s);
-                    synchronized (ServerApp.class) {
-                        PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true), true);
-                        printWriter.println(s.replaceFirst("order ", ""));
-                        printWriter.close();
-                    }
+                    PrintWriter printWriter = new PrintWriter(new FileOutputStream(file, true), true);
+                    printWriter.println(s.replaceFirst("order ", ""));
+                    printWriter.close();
 
                     sender().tell(new ResponseMessage("done"), getSelf());//sender null?
                 })

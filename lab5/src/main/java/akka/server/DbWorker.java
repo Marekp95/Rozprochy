@@ -1,6 +1,7 @@
 package akka.server;
 
 import akka.actor.AbstractActor;
+import akka.actor.ActorRef;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
 
@@ -36,6 +37,7 @@ public class DbWorker extends AbstractActor {
                         } else {
                             getSender().tell(-1, getSelf());
                         }
+                        getContext().getParent().tell(new SuicideRequest(), getSelf());
                     } catch (IOException e) {
                         log.error(e.toString());
                     }

@@ -17,30 +17,13 @@ public class Zygmunt extends AbstractActor {
         return receiveBuilder()
                 .match(String.class, s -> {
                     ActorRef actor = context().actorOf(Props.create(SearchResponseSender.class, getSender()));
-                    context().child("worker1").get().tell(s, actor);
-                    context().child("worker2").get().tell(s, actor);
+                    context().actorOf(Props.create(DbWorker.class, "books1.txt")).tell(s, actor);
+                    context().actorOf(Props.create(DbWorker.class, "books2.txt")).tell(s, actor);
                 })
                 .match(SuicideRequest.class, r -> {
                     getSender().tell(PoisonPill.getInstance(), getSelf());
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
-    }
-
-    @Override
-    public void preStart() throws Exception {
-        context().actorOf(Props.create(DbWorker.class, "books1.txt"), "worker1");
-        context().actorOf(Props.create(DbWorker.class, "books2.txt"), "worker2");
-    }
-
-
-    private static SupervisorStrategy strategy
-            = new OneForOneStrategy(10, Duration.create("1 minute"), DeciderBuilder
-            .matchAny(o -> restart())
-            .build());
-
-    @Override
-    public SupervisorStrategy supervisorStrategy() {
-        return strategy;
     }
 }
