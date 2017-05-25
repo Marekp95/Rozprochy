@@ -19,7 +19,7 @@ public class OrderActor extends AbstractActor {
 
     private final File file;
 
-    public OrderActor(){
+    public OrderActor() {
         file = new File("orders.txt");
     }
 
@@ -38,12 +38,5 @@ public class OrderActor extends AbstractActor {
                 })
                 .matchAny(o -> log.info("received unknown message"))
                 .build();
-    }
-
-    @Override
-    public SupervisorStrategy supervisorStrategy() {
-        return new OneForOneStrategy(10, Duration.create("1 minute"), DeciderBuilder.
-                matchAny(o -> SupervisorStrategy.restart()).
-                build());
     }
 }

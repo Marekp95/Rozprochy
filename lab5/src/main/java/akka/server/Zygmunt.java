@@ -1,11 +1,12 @@
 package akka.server;
 
-import akka.actor.AbstractActor;
-import akka.actor.ActorRef;
-import akka.actor.PoisonPill;
-import akka.actor.Props;
+import akka.actor.*;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.japi.pf.DeciderBuilder;
+import scala.concurrent.duration.Duration;
+
+import static akka.actor.SupervisorStrategy.restart;
 
 public class Zygmunt extends AbstractActor {
 
@@ -30,5 +31,16 @@ public class Zygmunt extends AbstractActor {
     public void preStart() throws Exception {
         context().actorOf(Props.create(DbWorker.class, "books1.txt"), "worker1");
         context().actorOf(Props.create(DbWorker.class, "books2.txt"), "worker2");
+    }
+
+
+    private static SupervisorStrategy strategy
+            = new OneForOneStrategy(10, Duration.create("1 minute"), DeciderBuilder
+            .matchAny(o -> restart())
+            .build());
+
+    @Override
+    public SupervisorStrategy supervisorStrategy() {
+        return strategy;
     }
 }
