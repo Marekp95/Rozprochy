@@ -65,10 +65,12 @@ public class Executor
      *
      * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.proto.WatcherEvent)
      */
+    @Override
     public void process(WatchedEvent event) {
         dm.process(event);
     }
 
+    @Override
     public void run() {
         try {
             synchronized (this) {
@@ -80,6 +82,7 @@ public class Executor
         }
     }
 
+    @Override
     public void closing(int rc) {
         synchronized (this) {
             notifyAll();
@@ -97,6 +100,7 @@ public class Executor
             start();
         }
 
+        @Override
         public void run() {
             byte b[] = new byte[80];
             int rc;
@@ -110,6 +114,7 @@ public class Executor
         }
     }
 
+    @Override
     public void exists(byte[] data) {
         if (data == null) {
             if (child != null) {
