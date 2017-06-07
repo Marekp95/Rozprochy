@@ -2,31 +2,31 @@
  * A simple class that monitors the data and existence of a ZooKeeper
  * node. It uses asynchronous ZooKeeper APIs.
  */
-import java.util.Arrays;
 
+import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.AsyncCallback.StatCallback;
-import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class DataMonitor implements Watcher, StatCallback {
 
-    ZooKeeper zk;
+    private final ZooKeeper zk;
 
-    String znode;
+    private final String znode;
 
-    Watcher chainedWatcher;
+    private final Watcher chainedWatcher;
 
-    boolean dead;
+    private final DataMonitorListener listener;
 
-    DataMonitorListener listener;
+    private byte prevData[];
 
-    byte prevData[];
-
-    public DataMonitor(ZooKeeper zk, String znode, Watcher chainedWatcher,
+    DataMonitor(ZooKeeper zk, String znode, Watcher chainedWatcher,
                        DataMonitorListener listener) {
         this.zk = zk;
         this.znode = znode;
@@ -35,6 +35,11 @@ public class DataMonitor implements Watcher, StatCallback {
         // Get things started by checking if the node exists. We are going
         // to be completely event driven
         zk.exists(znode, true, this, null);
+        try {
+            zk.getChildren(znode, this);
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -49,15 +54,14 @@ public class DataMonitor implements Watcher, StatCallback {
         /**
          * The ZooKeeper session is no longer valid.
          *
-         * @param rc
-         *                the ZooKeeper reason code
+         * @param rc the ZooKeeper reason code
          */
         void closing(int rc);
     }
 
     @Override
     public void process(WatchedEvent event) {
-        String path = event.getPath();
+        final String path = event.getPath();
         if (event.getType() == Event.EventType.None) {
             // We are are being told that the state of the
             // connection has changed
@@ -70,10 +74,11 @@ public class DataMonitor implements Watcher, StatCallback {
                     break;
                 case Expired:
                     // It's all over
-                    dead = true;
                     listener.closing(KeeperException.Code.SessionExpired);
                     break;
             }
+        } else if (event.getType() == Event.EventType.NodeChildrenChanged) {
+            System.out.println(countChildren(znode));
         } else {
             if (path != null && path.equals(znode)) {
                 // Something has changed on the node, let's find out
@@ -82,6 +87,16 @@ public class DataMonitor implements Watcher, StatCallback {
         }
         if (chainedWatcher != null) {
             chainedWatcher.process(event);
+        }
+    }
+
+    private int countChildren(String basePath) {
+        try {
+            final List<String> children = zk.getChildren(basePath, this);
+            return children.size() + children.stream().mapToInt(c -> countChildren(basePath + "/" + c)).sum();
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+            return 0;
         }
     }
 
@@ -97,7 +112,6 @@ public class DataMonitor implements Watcher, StatCallback {
                 break;
             case Code.SessionExpired:
             case Code.NoAuth:
-                dead = true;
                 listener.closing(rc);
                 return;
             default:
@@ -110,15 +124,13 @@ public class DataMonitor implements Watcher, StatCallback {
         if (exists) {
             try {
                 b = zk.getData(znode, false, null);
-            } catch (KeeperException e) {
+            } catch (KeeperException | InterruptedException e) {
                 // We don't need to worry about recovering now. The watch
                 // callbacks will kick off any exception handling
                 e.printStackTrace();
-            } catch (InterruptedException e) {
-                return;
             }
         }
-        if ((b == null && b != prevData)
+        if ((b == null && null != prevData)
                 || (b != null && !Arrays.equals(prevData, b))) {
             listener.exists(b);
             prevData = b;

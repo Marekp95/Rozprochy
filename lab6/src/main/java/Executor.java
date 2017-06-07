@@ -6,34 +6,30 @@
  * with the specified arguments when the znode exists and kills
  * the program if the znode goes away.
  */
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
+import java.io.*;
+import java.util.List;
+
 public class Executor
-        implements Watcher, Runnable, DataMonitor.DataMonitorListener
-{
-    String znode;
+        implements Watcher, Runnable, DataMonitor.DataMonitorListener {
+    private static final String znode = "/znode_testowy";
 
-    DataMonitor dm;
+    private final DataMonitor dm;
 
-    ZooKeeper zk;
+    private final ZooKeeper zk;
 
-    String filename;
+    private final String exec[];
 
-    String exec[];
+    private Process child;
 
-    Process child;
-
-    public Executor(String hostPort, String znode, String filename,
+    Executor(String hostPort,
                     String exec[]) throws KeeperException, IOException {
-        this.filename = filename;
         this.exec = exec;
         zk = new ZooKeeper(hostPort, 3000, this);
         dm = new DataMonitor(zk, znode, null, this);
@@ -43,18 +39,16 @@ public class Executor
      * @param args
      */
     public static void main(String[] args) {
-        if (args.length < 4) {
+        if (args.length < 2) {
             System.err
-                    .println("USAGE: Executor hostPort znode filename program [args ...]");
+                    .println("USAGE: Executor hostPort program [args ...]");
             System.exit(2);
         }
-        String hostPort = args[0];
-        String znode = args[1];
-        String filename = args[2];
-        String exec[] = new String[args.length - 3];
-        System.arraycopy(args, 3, exec, 0, exec.length);
+        final String hostPort = args[0];
+        final String exec[] = new String[args.length - 1];
+        System.arraycopy(args, 1, exec, 0, exec.length);
         try {
-            new Executor(hostPort, znode, filename, exec).run();
+            new Executor(hostPort, exec).run();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -63,7 +57,6 @@ public class Executor
     /***************************************************************************
      * We do process any events ourselves, we just need to forward them on.
      *
-     * @see org.apache.zookeeper.Watcher#process(org.apache.zookeeper.proto.WatcherEvent)
      */
     @Override
     public void process(WatchedEvent event) {
@@ -72,15 +65,42 @@ public class Executor
 
     @Override
     public void run() {
-        try {
-            synchronized (this) {
-                while (!dm.dead) {
-                    wait();
+        showNodes();
+        final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        mainLoop:
+        while (true) {
+            try {
+                final String line = bufferedReader.readLine();
+                switch (line) {
+                    case "quit":
+                        break mainLoop;
+                    case "show":
+                        showNodes();
+                        break;
+                    default:
+                        System.out.println("Invalid command");
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (InterruptedException e) {
         }
     }
+
+    private void showNodes(){
+        showNodes(znode, 0);
+    }
+
+    private void showNodes(String basePath, int depth) {
+        System.out.print(StringUtils.repeat('\t', depth));
+        System.out.println(basePath.replaceAll(".*/", ""));
+        try {
+            final List<String> children = zk.getChildren(basePath, this);
+            children.forEach(c -> showNodes(basePath + "/" + c, depth + 1));
+        } catch (KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     @Override
     public void closing(int rc) {
@@ -90,9 +110,9 @@ public class Executor
     }
 
     static class StreamWriter extends Thread {
-        OutputStream os;
+        final OutputStream os;
 
-        InputStream is;
+        final InputStream is;
 
         StreamWriter(InputStream is, OutputStream os) {
             this.is = is;
@@ -108,7 +128,7 @@ public class Executor
                 while ((rc = is.read(b)) > 0) {
                     os.write(b, 0, rc);
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
 
         }
@@ -122,7 +142,7 @@ public class Executor
                 child.destroy();
                 try {
                     child.waitFor();
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
             child = null;
@@ -137,18 +157,12 @@ public class Executor
                 }
             }
             try {
-                FileOutputStream fos = new FileOutputStream(filename);
-                fos.write(data);
-                fos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            try {
+                zk.getChildren(znode, this);
                 System.out.println("Starting child");
                 child = Runtime.getRuntime().exec(exec);
                 new StreamWriter(child.getInputStream(), System.out);
                 new StreamWriter(child.getErrorStream(), System.err);
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException | KeeperException e) {
                 e.printStackTrace();
             }
         }
