@@ -11,7 +11,7 @@ import scala.concurrent.duration.Duration;
 
 import static akka.actor.SupervisorStrategy.restart;
 
-public class NoahWyle extends AbstractActor {
+public class ServerManager extends AbstractActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
@@ -34,8 +34,8 @@ public class NoahWyle extends AbstractActor {
     @Override
     public void preStart() throws Exception {
         context().actorOf(Props.create(OrderActor.class), "orderReceiver");
-        context().actorOf(Props.create(TomaszKnapik.class), "reader");
-        context().actorOf(Props.create(Zygmunt.class), "dbManager");
+        context().actorOf(Props.create(BookReader.class), "reader");
+        context().actorOf(Props.create(DbSupervisor.class), "dbManager");
     }
 
     private static SupervisorStrategy strategy

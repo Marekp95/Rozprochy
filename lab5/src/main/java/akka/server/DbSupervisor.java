@@ -8,7 +8,7 @@ import scala.concurrent.duration.Duration;
 
 import static akka.actor.SupervisorStrategy.restart;
 
-public class Zygmunt extends AbstractActor {
+public class DbSupervisor extends AbstractActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 

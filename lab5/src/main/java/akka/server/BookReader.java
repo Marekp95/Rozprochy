@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-public class TomaszKnapik extends AbstractActor {
+public class BookReader extends AbstractActor {
 
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 

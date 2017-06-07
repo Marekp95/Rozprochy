@@ -37,9 +37,10 @@ public class DbWorker extends AbstractActor {
                         } else {
                             getSender().tell(-1, getSelf());
                         }
-                        getContext().getParent().tell(new SuicideRequest(), getSelf());
                     } catch (IOException e) {
                         log.error(e.toString());
+                    } finally {
+                        getContext().getParent().tell(new SuicideRequest(), getSelf());
                     }
                 })
                 .matchAny(o -> log.info("received unknown message"))

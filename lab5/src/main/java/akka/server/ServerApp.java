@@ -20,7 +20,7 @@ public class ServerApp {
 
         // create actor system & actors
         final ActorSystem system = ActorSystem.create("library", config);
-        final ActorRef remote = system.actorOf(Props.create(NoahWyle.class), "librarian");
+        final ActorRef remote = system.actorOf(Props.create(ServerManager.class), "librarian");
 
         // interaction
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
