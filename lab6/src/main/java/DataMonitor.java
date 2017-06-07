@@ -1,8 +1,3 @@
-/**
- * A simple class that monitors the data and existence of a ZooKeeper
- * node. It uses asynchronous ZooKeeper APIs.
- */
-
 import org.apache.zookeeper.AsyncCallback.StatCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;

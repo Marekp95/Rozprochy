@@ -1,12 +1,3 @@
-/**
- * A simple example program to use DataMonitor to start and
- * stop executables based on a znode. The program watches the
- * specified znode and saves the data that corresponds to the
- * znode in the filesystem. It also starts the specified program
- * with the specified arguments when the znode exists and kills
- * the program if the znode goes away.
- */
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -28,7 +19,7 @@ public class Executor
 
     private Process child;
 
-    Executor(String hostPort,
+    private Executor(String hostPort,
                     String exec[]) throws KeeperException, IOException {
         this.exec = exec;
         zk = new ZooKeeper(hostPort, 3000, this);
